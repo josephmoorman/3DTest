@@ -1,47 +1,64 @@
-using Unity.VisualScripting;
 using UnityEngine;
-// 1. Include the new Input System namespace
 using UnityEngine.InputSystem;
 
 public class PlayerMovement : MonoBehaviour
 {
-    // Cache the Rigidbody component to avoid calling GetComponent in Update
     private Rigidbody rb;
     [SerializeField] float movementSpeed = 3f;
     [SerializeField] float jumpForce = 5f;
+    [SerializeField] float acceleration = 30f;   // how fast you reach full speed
+    [SerializeField] float deceleration = 15f;   // lower = longer slide
+    [SerializeField] Transform groundCheck;
+    [SerializeField] LayerMask ground;
 
     void Start()
     {
-        // Get the Rigidbody component once when the game starts
         rb = GetComponent<Rigidbody>();
     }
 
     void Update()
     {
-        // 2. Use the new Input System syntax for the spacebar check
-        if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
-        {
-            rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
-        }
+        Keyboard kb = Keyboard.current;
+        if (kb == null) return;
 
-        if (Keyboard.current != null && Keyboard.current.wKey.isPressed)
-        {
-            rb.linearVelocity = new Vector3(rb.linearVelocity.x, rb.linearVelocity.y, movementSpeed);
-        }
+        float x = 0f;
+        float z = 0f;
+        if (kb.dKey.isPressed) x += 1f;
+        if (kb.aKey.isPressed) x -= 1f;
+        if (kb.wKey.isPressed) z += 1f;
+        if (kb.sKey.isPressed) z -= 1f;
 
-        if (Keyboard.current != null && Keyboard.current.aKey.isPressed)
-        {
-            rb.linearVelocity = new Vector3(-movementSpeed, rb.linearVelocity.y, rb.linearVelocity.z);
-        }
+        Vector3 input = new Vector3(x, 0f, z).normalized;
+        Vector3 targetVelocity = input * movementSpeed;
 
-        if (Keyboard.current != null && Keyboard.current.dKey.isPressed)
-        {
-            rb.linearVelocity = new Vector3(movementSpeed, rb.linearVelocity.y, rb.linearVelocity.z);
-        }
+        // Use acceleration when a key is held, deceleration when not
+        float rate = input.sqrMagnitude > 0f ? acceleration : deceleration;
 
-        if (Keyboard.current != null && Keyboard.current.sKey.isPressed)
+        Vector3 horizontal = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
+        horizontal = Vector3.MoveTowards(horizontal, targetVelocity, rate * Time.deltaTime);
+
+        rb.linearVelocity = new Vector3(horizontal.x, rb.linearVelocity.y, horizontal.z);
+
+        if (kb.spaceKey.wasPressedThisFrame && IsGrounded())
         {
-            rb.linearVelocity = new Vector3(rb.linearVelocity.x, rb.linearVelocity.y, -movementSpeed);
+            Jump();
         }
+    }
+
+    void Jump()
+    {
+        rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
+    }
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (collision.gameObject.CompareTag("Enemy Head"))
+        {
+            Destroy(collision.transform.parent.gameObject);
+            Jump();
+        }
+    }
+    bool IsGrounded()
+    {
+        return Physics.CheckSphere(groundCheck.position, 0.1f, ground);
     }
 }
