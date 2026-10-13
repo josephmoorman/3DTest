@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+
 public class PlayerMovement : MonoBehaviour
 {
     private Rigidbody rb;
@@ -10,6 +11,7 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] float deceleration = 15f;   // lower = longer slide
     [SerializeField] Transform groundCheck;
     [SerializeField] LayerMask ground;
+    [SerializeField] AudioSource jumpSound;
 
     void Start()
     {
@@ -48,6 +50,7 @@ public class PlayerMovement : MonoBehaviour
     void Jump()
     {
         rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
+        jumpSound.Play();
     }
     private void OnCollisionEnter(Collision collision)
     {
